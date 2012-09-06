@@ -1,0 +1,11 @@
+include COPYRIGHT.txt
+include LICENSE.txt
+include ReadMe.txt
+include doc/AutoItLibrary.html
+include 3rdPartyTools/AutoIt/AutoItX3.dll
+include 3rdPartyTools/AutoIt/AutoItX.chm
+include 3rdPartyTools/AutoIt/Au3Info.exe
+include 3rdPartyTools/AutoIt/AutoIt_License.html
+include tests/*.py
+include tests/*.html
+include tests/*.bat
