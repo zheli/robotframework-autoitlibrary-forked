@@ -1,3 +1,4 @@
+# -*- coding: UTF-8 -*-
 """
 Package: robotframework-AutoItLibrary
 Module:  AutoItLibrary
@@ -5,6 +6,7 @@ Purpose: Provides a Robot Framework keyword wrapper for the freeware AutoIt tool
          (http://www.autoitscript.com/autoit3/index.shtml) via AutoIt's AutoItX.dll COM object.
 
          Copyright (c) 2008-2010 Texas Instruments, Inc.
+         Copyright (c) 2011-2012 Zhe Li.
 
          Licensed under the Apache License, Version 2.0 (the "License");
          you may not use this file except in compliance with the License.
@@ -18,14 +20,14 @@ Purpose: Provides a Robot Framework keyword wrapper for the freeware AutoIt tool
          See the License for the specific language governing permissions and
          limitations under the License.
 """
-__author__  = "Martin Taylor <cmtaylor@ti.com>"
-__version__ = "1.1"
+__author__  = "Martin Taylor <cmtaylor@ti.com>, Zhe Li <zhe.li@lavasoft.com>"
+__version__ = "1.2"
 #
 # Import the libraries we need
 #
 import win32com.client                  # For COM interface to AutoIt
-import sys                              # For command line args
-import os                               # For file path manipulation
+import sys                                    # For command line args
+import os                                     # For file path manipulation
 import types
 import Logger
 import Counter
@@ -76,7 +78,7 @@ class AutoItLibrary(Logger.Logger, Counter.Counter) :
         #
         # Make a connection to the AutoIt COM object
         #
-        self._AutoIt = win32com.client.Dispatch("AutoItX3.Control")
+        self._AutoIt = win32com.client.Dispatch(u"AutoItX3.Control")
         #
         # Remember our input parameters
         #
@@ -199,6 +201,7 @@ class AutoItLibrary(Logger.Logger, Counter.Counter) :
         width  = self._AutoIt.WinGetPosWidth("")
         height = self._AutoIt.WinGetPosHeight("")
         bbox   = [x, y, x+width-1, y+height-1]
+        self.MouseMove(x+width+10, y+height+10)
         #
         # Capture and save the screen image of the window
         #
@@ -242,6 +245,46 @@ class AutoItLibrary(Logger.Logger, Counter.Counter) :
         #
         self._html('<td></td></tr><tr><td colspan="3"><a href="%s">'
                    '<img src="%s" width="700px"></a></td></tr>' % (FilePath, FilePath))
+
+    #
+    #-------------------------------------------------------------------------------
+    #
+    def GetWindowImage(self, WindowTitle, Text = '', FilePath = None):
+        """
+        Capture an image of the Window specified into the given _FilePath_.
+        """
+        #
+        # Check that PIL is installed
+        #
+        if ImageGrab == None :
+            raise RuntimeError("Python Imaging Library (PIL) is not installed, but is required for GetScreenImage")
+        #
+        # Check for a valid FilePath and make sure the directories exist
+        #
+        if FilePath and os.path.isabs(FilePath):
+            raise RuntimeError("Given FilePath='%s' must be relative to Robot outpudir" % FilePath)
+        fullFilePath = os.path.join(self._OutputDir, FilePath)
+        if not os.path.exists(os.path.split(fullFilePath)[0]):
+            os.makedirs(os.path.split(fullFilePath)[0])
+        self._info("GetWindowImage(FilePath=%s)" % fullFilePath)
+        #
+        # Capture and save the image of the whole window
+        #
+        _GrabWindowImage(WindowTitle, WindowText, fullFilePath)
+        #
+        # Embed the screenshot in the Robot Framework log file
+        #
+        self._html('<td></td></tr><tr><td colspan="3"><a href="%s">'
+                   '<img src="%s" width="700px"></a></td></tr>' % (FilePath, FilePath))
+        
+    def _GrabWindowImage(self, WindowTitle, Text, fullFilePath):
+        pos_x  = self._AutoIt.WinGetPosX(WindowTitle, Text)
+        pos_y  = self._AutoIt.WinGetPosY(WindowTitle, Text)
+        width  = self._AutoIt.WinGetPosWidth(WindowTitle, Text)
+        height = self._AutoIt.WinGetPosHeight(WindowTitle, Text)
+        GrabbedImage = ImageGrab.grab((pos_x, pos_y, width, height)) # store screenshot as "RGB" Image
+        GrabbedImage.save(fullFilePath)     # PIL evaluates extension
+
     #
     #-------------------------------------------------------------------------------
     #
@@ -368,5 +411,44 @@ class AutoItLibrary(Logger.Logger, Counter.Counter) :
             self._AutoIt.WinActivate(WindowTitle, WindowText)
 
         self.WinWaitActive(WindowTitle, WindowText, TimeOut)
+
+    #
+    #-------------------------------------------------------------------------------
+    #
+    def click_button(self, WindowTitle, WindowText='', ButtonText='OK'):
+        """
+        Click button based on its text. (Only buttons and checkbox are supported!!!)
+
+        Parameters:
+        | WindowTitle=<string>  | Title of the application window expected to appear      |
+        | [WindowText=<string>] | Optional text on the window expected to appear          |
+        | [ButtonText=<string>] | Optional overide to the default button text 'OK'        |
+
+        """
+        self._infoKW(self.click_button, WindowTitle, WindowText, ButtonText)
+        first_control_text = self.ControlGetText(WindowTitle, WindowText, self.ControlGetFocus(WindowTitle, WindowText))
+        while(self.ControlGetText(WindowTitle, WindowText, self.ControlGetFocus(WindowTitle, WindowText)).replace('&', '') != ButtonText and
+                self.ControlGetText(WindowTitle, WindowText, self.ControlGetFocus(WindowTitle, WindowText)) != ButtonText):
+            self.Send('{TAB}')
+            if self.ControlGetText(WindowTitle, WindowText, self.ControlGetFocus(WindowTitle, WindowText)) == first_control_text:
+                raise Exception('failed to find button [%s] in window [%s]' % (ButtonText, WindowTitle))
+        self.ControlClick(WindowTitle, WindowText, self.ControlGetFocus(WindowTitle, WindowText))
+
+    #
+    #-------------------------------------------------------------------------------
+    #
+    def AutoItSetOption(self, Option, Value):
+        """
+        Set up AutoIt settings.
+        Reference: AutoItX.chm::/html/com_interface/methods/AutoItSetOption.htm
+        """
+        #print a message to log
+        self._infoKW(self.AutoItSetOption, Option, Value)
+        self._AutoIt.AutoItSetOption(str(Option), int(Value))
+
+
+if __name__== '__main__':
+    from robotremoteserver import RobotRemoteServer
+    RobotRemoteServer(AutoItLibrary(), *sys.argv[1:])
 #
 # -------------------------------- End of file --------------------------------
