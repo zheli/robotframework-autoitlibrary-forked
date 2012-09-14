@@ -20,7 +20,7 @@ Purpose: Provides a Robot Framework keyword wrapper for the freeware AutoIt tool
          See the License for the specific language governing permissions and
          limitations under the License.
 """
-__author__  = "Martin Taylor <cmtaylor@ti.com>, Zhe Li <zhe.li@lavasoft.com>"
+__author__  = "Martin Taylor <cmtaylor@ti.com>, Zhe Li <zhe.li@hiq.se>"
 __version__ = "1.2"
 #
 # Import the libraries we need
